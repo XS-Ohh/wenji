@@ -17,6 +17,9 @@
 
 完整规划见 [第一阶段实施方案](docs/implementation-plan.md)。
 
+三名成员的分支创建、日常提交、Pull Request、冲突处理和版本恢复流程见
+[团队 Git 协作说明](docs/git-team-workflow.md)。
+
 ## 环境要求
 
 - Java 17或更高LTS版本，推荐Java 21
