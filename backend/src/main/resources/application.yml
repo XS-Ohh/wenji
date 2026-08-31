@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: wenji-backend
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/wenji?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  sql:
+    init:
+      mode: ${DB_INIT_MODE:never}
+      encoding: UTF-8
+  jackson:
+    default-property-inclusion: non_null
+    time-zone: Asia/Shanghai
+
+server:
+  port: ${SERVER_PORT:8080}
+
+logging:
+  level:
+    org.springframework.web: INFO
+    org.springframework.security: INFO
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    banner: false
+    db-config:
+      id-type: auto
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+wenji:
+  jwt:
+    secret: ${JWT_SECRET:local-development-secret-change-before-production}
+    expiration-seconds: ${JWT_EXPIRATION_SECONDS:7200}

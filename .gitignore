@@ -1,0 +1,12 @@
+.idea/
+.vscode/
+*.iml
+*.log
+.env
+.m2/
+backend/target/
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/
+uploads/*
+!uploads/.gitkeep
