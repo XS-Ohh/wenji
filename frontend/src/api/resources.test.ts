@@ -31,4 +31,12 @@ describe('resourceApi favorites', () => {
     await expect(resourceApi.favorites()).resolves.toEqual(resources)
     expect(http.get).toHaveBeenCalledWith('/favorites')
   })
+
+  it('loads lightweight resources for the culture map', async () => {
+    const resources = [{ id: 7, name: '上海博物馆', longitude: 121.47, latitude: 31.23 }]
+    vi.mocked(http.get).mockResolvedValue({ data: { data: resources } } as never)
+
+    await expect(resourceApi.map({ city: '上海', categoryId: 1 })).resolves.toEqual(resources)
+    expect(http.get).toHaveBeenCalledWith('/resources/map', { params: { city: '上海', categoryId: 1 } })
+  })
 })

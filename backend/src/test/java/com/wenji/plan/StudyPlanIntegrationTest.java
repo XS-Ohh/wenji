@@ -2,6 +2,10 @@ package com.wenji.plan;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.wenji.ai.AiRouteClient;
+import com.wenji.ai.AiRouteLog;
+import com.wenji.ai.AiRouteLogMapper;
+import com.wenji.ai.AiRouteProperties;
 import com.wenji.auth.JwtService;
 import com.wenji.auth.UserPrincipal;
 import com.wenji.resource.CultureCategory;
@@ -17,10 +21,17 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -42,6 +53,9 @@ class StudyPlanIntegrationTest {
     @Autowired CultureResourceMapper resourceMapper;
     @Autowired PasswordEncoder passwordEncoder;
     @Autowired JwtService jwtService;
+    @Autowired AiRouteProperties aiRouteProperties;
+    @Autowired AiRouteLogMapper aiRouteLogMapper;
+    @MockitoBean AiRouteClient aiRouteClient;
 
     private CultureResource firstResource;
     private CultureResource secondResource;
@@ -57,8 +71,74 @@ class StudyPlanIntegrationTest {
         categoryMapper.insert(category);
         firstResource = resource(category.getId(), "计划资源一");
         secondResource = resource(category.getId(), "计划资源二");
+        CultureResource thirdResource = resource(category.getId(), "计划资源三");
+        CultureResource fourthResource = resource(category.getId(), "计划资源四");
+        firstResource.setFavoriteCount(20);
+        secondResource.setFavoriteCount(10);
+        thirdResource.setAverageRating(new BigDecimal("4.80"));
+        fourthResource.setAverageRating(new BigDecimal("4.60"));
+        resourceMapper.updateById(firstResource);
+        resourceMapper.updateById(secondResource);
+        resourceMapper.updateById(thirdResource);
+        resourceMapper.updateById(fourthResource);
+        aiRouteProperties.setEnabled(false);
         ownerToken = token(user("plan_owner"));
         otherToken = token(user("plan_other"));
+    }
+
+    @Test
+    void generatesAndPersistsRuleFallbackRoute() throws Exception {
+        long planId = createPlan();
+
+        mockMvc.perform(post("/api/plans/{id}/ai-route", planId)
+                        .header("Authorization", bearer(ownerToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"desiredPlaces":4,"dailyStartTime":"09:00","dailyEndTime":"17:00"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.fallback").value(true))
+                .andExpect(jsonPath("$.data.plan.aiGenerated").value(true))
+                .andExpect(jsonPath("$.data.plan.itemCount").value(4))
+                .andExpect(jsonPath("$.data.plan.items[0].resourceId").value(firstResource.getId()))
+                .andExpect(jsonPath("$.data.plan.items[0].startTime").value("09:00:00"));
+
+        long logCount = aiRouteLogMapper.selectCount(new LambdaQueryWrapper<AiRouteLog>()
+                .eq(AiRouteLog::getPlanId, planId)
+                .eq(AiRouteLog::getStatus, "FALLBACK"));
+        org.junit.jupiter.api.Assertions.assertEquals(1, logCount);
+    }
+
+    @Test
+    void retriesInvalidAiOutputOnceThenFallsBack() throws Exception {
+        long planId = createPlan();
+        aiRouteProperties.setEnabled(true);
+        aiRouteProperties.setBaseUrl("https://example.invalid/v1");
+        aiRouteProperties.setApiKey("test-key-not-logged");
+        aiRouteProperties.setModel("test-model");
+        when(aiRouteClient.generate(org.mockito.ArgumentMatchers.anyString())).thenReturn("not-json");
+
+        mockMvc.perform(post("/api/plans/{id}/ai-route", planId)
+                        .header("Authorization", bearer(ownerToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"desiredPlaces\":3}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.fallback").value(true))
+                .andExpect(jsonPath("$.data.plan.aiGenerated").value(true));
+
+        verify(aiRouteClient, times(2)).generate(org.mockito.ArgumentMatchers.anyString());
+    }
+
+    @Test
+    void rejectsInvalidDailyTimeWindow() throws Exception {
+        long planId = createPlan();
+
+        mockMvc.perform(post("/api/plans/{id}/ai-route", planId)
+                        .header("Authorization", bearer(ownerToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"dailyStartTime\":\"17:00\",\"dailyEndTime\":\"09:00\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(40000));
     }
 
     @Test

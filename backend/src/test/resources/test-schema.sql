@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS ai_route_logs;
+DROP TABLE IF EXISTS checkins;
 DROP TABLE IF EXISTS plan_items;
 DROP TABLE IF EXISTS study_plans;
 DROP TABLE IF EXISTS favorites;
@@ -96,4 +98,41 @@ CREATE TABLE plan_items (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_item_plan FOREIGN KEY (plan_id) REFERENCES study_plans(id) ON DELETE CASCADE,
     CONSTRAINT fk_item_resource FOREIGN KEY (resource_id) REFERENCES culture_resources(id)
+);
+
+CREATE TABLE checkins (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    plan_id BIGINT,
+    resource_id BIGINT NOT NULL,
+    checkin_time TIMESTAMP NOT NULL,
+    image_url VARCHAR(255),
+    content VARCHAR(500),
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    audit_comment VARCHAR(255),
+    audited_by BIGINT,
+    audited_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_checkin_user_resource UNIQUE (user_id, resource_id),
+    CONSTRAINT fk_checkin_user FOREIGN KEY (user_id) REFERENCES users(id),
+    CONSTRAINT fk_checkin_plan FOREIGN KEY (plan_id) REFERENCES study_plans(id),
+    CONSTRAINT fk_checkin_resource FOREIGN KEY (resource_id) REFERENCES culture_resources(id),
+    CONSTRAINT fk_checkin_auditor FOREIGN KEY (audited_by) REFERENCES users(id)
+);
+
+CREATE TABLE ai_route_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    plan_id BIGINT,
+    request_json CLOB NOT NULL,
+    response_json CLOB,
+    provider VARCHAR(50),
+    model_name VARCHAR(100),
+    status VARCHAR(20),
+    error_message VARCHAR(500),
+    duration_ms INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_ai_log_user FOREIGN KEY (user_id) REFERENCES users(id),
+    CONSTRAINT fk_ai_log_plan FOREIGN KEY (plan_id) REFERENCES study_plans(id)
 );

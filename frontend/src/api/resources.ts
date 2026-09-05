@@ -1,9 +1,15 @@
-import type { ApiResponse, Category, CultureResource, PageResponse } from '../types/api'
+import type { ApiResponse, Category, CultureMapResource, CultureResource, PageResponse } from '../types/api'
 import { http } from '../utils/http'
 
 export interface ResourceQuery {
   page: number
   pageSize: number
+  keyword?: string
+  categoryId?: number
+  city?: string
+}
+
+export interface MapResourceQuery {
   keyword?: string
   categoryId?: number
   city?: string
@@ -18,6 +24,9 @@ export const resourceApi = {
   },
   async detail(id: number) {
     return (await http.get<ApiResponse<CultureResource>>(`/resources/${id}`)).data.data
+  },
+  async map(params: MapResourceQuery) {
+    return (await http.get<ApiResponse<CultureMapResource[]>>('/resources/map', { params })).data.data
   },
   async favorite(id: number) {
     await http.post(`/resources/${id}/favorite`)

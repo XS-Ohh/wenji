@@ -64,6 +64,24 @@ public class CultureResourceService {
         return PageResponse.from(result, records);
     }
 
+    public List<MapResourceResponse> mapResources(String keyword, Long categoryId, String city) {
+        List<CultureResource> resources = resourceMapper.selectList(new LambdaQueryWrapper<CultureResource>()
+                .eq(CultureResource::getStatus, "PUBLISHED")
+                .eq(categoryId != null, CultureResource::getCategoryId, categoryId)
+                .eq(StringUtils.hasText(city), CultureResource::getCity, city)
+                .and(StringUtils.hasText(keyword), wrapper -> wrapper
+                        .like(CultureResource::getName, keyword)
+                        .or().like(CultureResource::getSummary, keyword)
+                        .or().like(CultureResource::getAddress, keyword))
+                .orderByDesc(CultureResource::getFavoriteCount)
+                .orderByAsc(CultureResource::getId));
+        Map<Long, CultureCategory> categories = categoryMap(resources);
+        return resources.stream()
+                .map(resource -> MapResourceResponse.from(resource,
+                        categoryName(categories, resource.getCategoryId())))
+                .toList();
+    }
+
     @Transactional
     public ResourceResponse detail(Long id) {
         return detail(id, null);

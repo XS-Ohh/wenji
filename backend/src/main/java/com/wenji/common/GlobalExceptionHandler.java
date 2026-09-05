@@ -6,7 +6,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -22,6 +24,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleBusiness(BusinessException exception) {
         ErrorCode error = exception.getErrorCode();
         return ResponseEntity.status(error.status()).body(ApiResponse.error(error.code(), exception.getMessage()));
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAccessDenied(AccessDeniedException exception) {
+        return ResponseEntity.status(ErrorCode.FORBIDDEN.status())
+                .body(ApiResponse.error(ErrorCode.FORBIDDEN.code(), "没有访问权限"));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -49,6 +57,11 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(ErrorCode.CONFLICT.code(), "数据冲突，请检查唯一字段或关联数据"));
     }
 
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiResponse<Void>> handleUploadTooLarge(MaxUploadSizeExceededException exception) {
+        return badRequest("图片大小不能超过 5MB");
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleUnexpected(Exception exception) {
         log.error("Unhandled request exception", exception);
@@ -64,4 +77,3 @@ public class GlobalExceptionHandler {
         return error.getField() + ": " + error.getDefaultMessage();
     }
 }
-

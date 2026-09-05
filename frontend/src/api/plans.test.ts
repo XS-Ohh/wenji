@@ -39,4 +39,13 @@ describe('planApi', () => {
 
     expect(http.put).toHaveBeenCalledWith('/plans/9/items/reorder', { itemIds: [3, 2, 1] })
   })
+
+  it('requests an AI route with the daily time window', async () => {
+    const payload = { desiredPlaces: 4 as const, dailyStartTime: '09:00:00', dailyEndTime: '17:00:00' }
+    vi.mocked(http.post).mockResolvedValue({ data: { data: { fallback: true } } } as never)
+
+    await planApi.generateAiRoute(9, payload)
+
+    expect(http.post).toHaveBeenCalledWith('/plans/9/ai-route', payload)
+  })
 })

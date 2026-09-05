@@ -48,4 +48,12 @@ public class CultureResourceController {
                                                 @AuthenticationPrincipal UserPrincipal principal) {
         return ApiResponse.success(service.detail(id, principal == null ? null : principal.id()));
     }
+
+    @GetMapping("/resources/map")
+    public ApiResponse<List<MapResourceResponse>> mapResources(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) String city) {
+        return ApiResponse.success(service.mapResources(keyword, categoryId, city));
+    }
 }

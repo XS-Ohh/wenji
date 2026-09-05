@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ArrowDown, ArrowLeft, ArrowUp, Clock, Delete, Edit, Location, Plus } from '@element-plus/icons-vue'
+import { ArrowDown, ArrowLeft, ArrowUp, Camera, Clock, Delete, Edit, Location, MagicStick, Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { planApi, type PlanItemPayload, type PlanPayload } from '../api/plans'
+import { planApi, type AiRoutePayload, type PlanItemPayload, type PlanPayload } from '../api/plans'
 import { resourceApi } from '../api/resources'
-import type { CultureResource, PlanItem, PlanStatus, StudyPlan } from '../types/api'
+import type { AiRouteResult, CultureResource, PlanItem, PlanStatus, StudyPlan } from '../types/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -13,15 +13,23 @@ const planId = Number(route.params.id)
 const loading = ref(true)
 const failed = ref(false)
 const saving = ref(false)
+const generating = ref(false)
 const plan = ref<StudyPlan>()
 const resources = ref<CultureResource[]>([])
 const itemDialog = ref(false)
 const planDialog = ref(false)
+const aiRouteDialog = ref(false)
+const generatedRoute = ref<AiRouteResult>()
 const editingItemId = ref<number>()
 const editDateRange = ref<string[]>([])
 
 const itemForm = reactive<PlanItemPayload>({ resourceId: 0 })
 const editPlanForm = reactive<PlanPayload>({ title: '', city: '', startDate: '', endDate: '' })
+const aiRouteForm = reactive<AiRoutePayload>({
+  desiredPlaces: 4,
+  dailyStartTime: '09:00:00',
+  dailyEndTime: '17:00:00',
+})
 
 const statusOptions: Array<{ value: PlanStatus; label: string }> = [
   { value: 'DRAFT', label: '草稿' },
@@ -171,6 +179,39 @@ async function removePlan() {
   await router.push('/plans')
 }
 
+function openAiRoute() {
+  aiRouteDialog.value = true
+}
+
+function startCheckin(item: PlanItem) {
+  router.push({ path: '/checkins', query: { planId, resourceId: item.resourceId } })
+}
+
+async function generateAiRoute() {
+  if (aiRouteForm.dailyStartTime >= aiRouteForm.dailyEndTime) {
+    ElMessage.warning('结束时间必须晚于开始时间')
+    return
+  }
+  if (plan.value?.items.length) {
+    await ElMessageBox.confirm('生成新路线后，当前路线节点将被替换。是否继续？', '替换当前路线', {
+      type: 'warning',
+      confirmButtonText: '继续生成',
+    })
+  }
+  generating.value = true
+  try {
+    const result = await planApi.generateAiRoute(planId, aiRouteForm)
+    generatedRoute.value = result
+    plan.value = result.plan
+    aiRouteDialog.value = false
+    ElMessage.success(result.fallback ? '已使用规则推荐生成路线' : '智能路线已生成')
+  } catch (error: any) {
+    ElMessage.error(error.response?.data?.message || '路线生成失败')
+  } finally {
+    generating.value = false
+  }
+}
+
 onMounted(load)
 </script>
 
@@ -200,8 +241,17 @@ onMounted(load)
       <section class="route-section">
         <header class="route-heading">
           <div><h2>路线节点</h2><span>{{ plan.items.length }} 个文化地点</span></div>
-          <el-button type="primary" :icon="Plus" @click="openCreateItem">添加地点</el-button>
+          <div class="route-heading-actions">
+            <el-button :icon="MagicStick" @click="openAiRoute">智能生成</el-button>
+            <el-button type="primary" :icon="Plus" @click="openCreateItem">添加地点</el-button>
+          </div>
         </header>
+
+        <div v-if="generatedRoute" class="ai-route-result">
+          <div><strong>{{ generatedRoute.title }}</strong><span>{{ generatedRoute.fallback ? '规则推荐' : 'AI 推荐' }}</span></div>
+          <p>{{ generatedRoute.summary }}</p>
+          <small v-if="generatedRoute.tips.length">{{ generatedRoute.tips.join(' · ') }}</small>
+        </div>
 
         <el-empty v-if="plan.items.length === 0" description="路线中还没有文化地点" />
         <div v-else class="route-list">
@@ -216,6 +266,7 @@ onMounted(load)
               <p v-if="item.transportation || item.reason">{{ item.transportation }}<template v-if="item.transportation && item.reason"> · </template>{{ item.reason }}</p>
             </div>
             <div class="route-actions">
+              <el-tooltip content="打卡"><el-button circle :icon="Camera" @click="startCheckin(item)" /></el-tooltip>
               <el-tooltip content="上移"><el-button circle :icon="ArrowUp" :disabled="index === 0" @click="moveItem(index, -1)" /></el-tooltip>
               <el-tooltip content="下移"><el-button circle :icon="ArrowDown" :disabled="index === plan.items.length - 1" @click="moveItem(index, 1)" /></el-tooltip>
               <el-tooltip content="编辑"><el-button circle :icon="Edit" @click="openEditItem(item)" /></el-tooltip>
@@ -225,6 +276,30 @@ onMounted(load)
         </div>
       </section>
     </template>
+
+    <el-dialog v-model="aiRouteDialog" title="生成文化研学路线" width="min(520px, 92vw)">
+      <el-alert v-if="plan?.items.length" title="生成后将替换当前路线节点" type="warning" :closable="false" show-icon />
+      <el-form class="ai-route-form" label-position="top">
+        <el-form-item label="地点数量">
+          <el-radio-group v-model="aiRouteForm.desiredPlaces">
+            <el-radio-button :value="3">3 个地点</el-radio-button>
+            <el-radio-button :value="4">4 个地点</el-radio-button>
+          </el-radio-group>
+        </el-form-item>
+        <div class="dialog-form-grid">
+          <el-form-item label="每日开始时间">
+            <el-time-picker v-model="aiRouteForm.dailyStartTime" value-format="HH:mm:ss" format="HH:mm" />
+          </el-form-item>
+          <el-form-item label="每日结束时间">
+            <el-time-picker v-model="aiRouteForm.dailyEndTime" value-format="HH:mm:ss" format="HH:mm" />
+          </el-form-item>
+        </div>
+      </el-form>
+      <template #footer>
+        <el-button @click="aiRouteDialog = false">取消</el-button>
+        <el-button type="primary" :icon="MagicStick" :loading="generating" @click="generateAiRoute">生成路线</el-button>
+      </template>
+    </el-dialog>
 
     <el-dialog v-model="itemDialog" :title="editingItemId ? '编辑路线节点' : '添加路线节点'" width="min(620px, 92vw)">
       <el-form label-position="top">

@@ -1,5 +1,8 @@
 package com.wenji.plan;
 
+import com.wenji.ai.AiRouteRequest;
+import com.wenji.ai.AiRouteResponse;
+import com.wenji.ai.AiRouteService;
 import com.wenji.auth.UserPrincipal;
 import com.wenji.common.ApiResponse;
 import jakarta.validation.Valid;
@@ -21,9 +24,11 @@ import java.util.List;
 public class StudyPlanController {
 
     private final StudyPlanService service;
+    private final AiRouteService aiRouteService;
 
-    public StudyPlanController(StudyPlanService service) {
+    public StudyPlanController(StudyPlanService service, AiRouteService aiRouteService) {
         this.service = service;
+        this.aiRouteService = aiRouteService;
     }
 
     @PostMapping
@@ -89,5 +94,12 @@ public class StudyPlanController {
                                                        @AuthenticationPrincipal UserPrincipal principal,
                                                        @Valid @RequestBody PlanReorderRequest request) {
         return ApiResponse.success(service.reorder(principal.id(), id, request.itemIds()));
+    }
+
+    @PostMapping("/{id}/ai-route")
+    public ApiResponse<AiRouteResponse> generateAiRoute(@PathVariable Long id,
+                                                        @AuthenticationPrincipal UserPrincipal principal,
+                                                        @Valid @RequestBody AiRouteRequest request) {
+        return ApiResponse.success(aiRouteService.generate(principal.id(), id, request));
     }
 }

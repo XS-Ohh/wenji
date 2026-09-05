@@ -47,6 +47,9 @@ class CultureResourceIntegrationTest {
         categoryMapper.insert(museum);
 
         published = resource("上海博物馆", "上海", "PUBLISHED");
+        published.setLongitude(new BigDecimal("121.475383"));
+        published.setLatitude(new BigDecimal("31.228682"));
+        resourceMapper.updateById(published);
         resource("内部草稿", "上海", "DRAFT");
         resource("苏州博物馆", "苏州", "PUBLISHED");
         admin = user("admin", "ADMIN");
@@ -78,6 +81,20 @@ class CultureResourceIntegrationTest {
         mockMvc.perform(get("/api/resources/{id}", draft.getId()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value(40400));
+    }
+
+    @Test
+    void returnsLightweightPublishedResourcesForMap() throws Exception {
+        mockMvc.perform(get("/api/resources/map")
+                        .param("keyword", "博物馆")
+                        .param("categoryId", museum.getId().toString())
+                        .param("city", "上海"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].name").value("上海博物馆"))
+                .andExpect(jsonPath("$.data[0].longitude").value(121.475383))
+                .andExpect(jsonPath("$.data[0].latitude").value(31.228682))
+                .andExpect(jsonPath("$.data[0].description").doesNotExist());
     }
 
     @Test
@@ -131,4 +148,3 @@ class CultureResourceIntegrationTest {
         return user;
     }
 }
-

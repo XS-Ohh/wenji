@@ -13,6 +13,10 @@ spring:
   jackson:
     default-property-inclusion: non_null
     time-zone: Asia/Shanghai
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
 
 server:
   port: ${SERVER_PORT:8080}
@@ -35,6 +39,13 @@ springdoc:
     path: /swagger-ui.html
 
 wenji:
+  upload-dir: ${UPLOAD_DIR:../uploads}
   jwt:
     secret: ${JWT_SECRET:local-development-secret-change-before-production}
     expiration-seconds: ${JWT_EXPIRATION_SECONDS:7200}
+  ai:
+    enabled: ${AI_ENABLED:false}
+    base-url: ${AI_BASE_URL:}
+    api-key: ${AI_API_KEY:}
+    model: ${AI_MODEL:}
+    timeout-seconds: ${AI_TIMEOUT_SECONDS:30}

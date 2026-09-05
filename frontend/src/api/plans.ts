@@ -1,4 +1,4 @@
-import type { ApiResponse, PlanItem, StudyPlan } from '../types/api'
+import type { AiRouteResult, ApiResponse, PlanItem, StudyPlan } from '../types/api'
 import { http } from '../utils/http'
 
 export interface PlanPayload {
@@ -19,6 +19,12 @@ export interface PlanItemPayload {
   sortOrder?: number
   transportation?: string
   reason?: string
+}
+
+export interface AiRoutePayload {
+  desiredPlaces: 3 | 4
+  dailyStartTime: string
+  dailyEndTime: string
 }
 
 export const planApi = {
@@ -51,5 +57,8 @@ export const planApi = {
   },
   async reorder(planId: number, itemIds: number[]) {
     return (await http.put<ApiResponse<PlanItem[]>>(`/plans/${planId}/items/reorder`, { itemIds })).data.data
+  },
+  async generateAiRoute(planId: number, payload: AiRoutePayload) {
+    return (await http.post<ApiResponse<AiRouteResult>>(`/plans/${planId}/ai-route`, payload)).data.data
   },
 }

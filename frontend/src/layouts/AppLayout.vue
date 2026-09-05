@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Calendar, Compass, Star, SwitchButton, User } from '@element-plus/icons-vue'
+import { Calendar, Camera, Compass, Finished, MapLocation, Star, SwitchButton, User } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 
@@ -21,8 +21,11 @@ function logout() {
       </RouterLink>
       <nav class="primary-nav" aria-label="主导航">
         <RouterLink to="/resources"><Compass :size="18" />文化资源</RouterLink>
+        <RouterLink to="/map"><MapLocation :size="18" />文化地图</RouterLink>
         <RouterLink v-if="auth.isAuthenticated" to="/favorites"><Star :size="18" />我的收藏</RouterLink>
         <RouterLink v-if="auth.isAuthenticated" to="/plans"><Calendar :size="18" />研学计划</RouterLink>
+        <RouterLink v-if="auth.user?.role === 'STUDENT'" to="/checkins"><Camera :size="18" />我的打卡</RouterLink>
+        <RouterLink v-if="auth.user?.role === 'ADMIN'" to="/admin/checkins"><Finished :size="18" />打卡审核</RouterLink>
       </nav>
       <div class="account-actions">
         <template v-if="auth.isAuthenticated">

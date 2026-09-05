@@ -19,6 +19,7 @@ mybatis-plus:
       id-type: auto
 
 wenji:
+  upload-dir: ${java.io.tmpdir}/wenji-test-uploads
   jwt:
     secret: test-secret-must-be-at-least-thirty-two-characters
     expiration-seconds: 7200

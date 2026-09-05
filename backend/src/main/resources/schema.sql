@@ -135,6 +135,7 @@ CREATE TABLE checkins (
     audited_at DATETIME,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uk_checkin_user_resource UNIQUE (user_id, resource_id),
     CONSTRAINT fk_checkin_user FOREIGN KEY (user_id) REFERENCES users(id),
     CONSTRAINT fk_checkin_plan FOREIGN KEY (plan_id) REFERENCES study_plans(id),
     CONSTRAINT fk_checkin_resource FOREIGN KEY (resource_id) REFERENCES culture_resources(id),

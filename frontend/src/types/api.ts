@@ -59,6 +59,23 @@ export interface CultureResource {
   averageRating: number
 }
 
+export interface CultureMapResource {
+  id: number
+  categoryId: number
+  categoryName: string
+  name: string
+  city: string
+  district?: string
+  address: string
+  longitude?: number
+  latitude?: number
+  summary?: string
+  openingHours?: string
+  coverImage?: string
+  favoriteCount: number
+  averageRating: number
+}
+
 export type PlanStatus = 'DRAFT' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
 
 export interface PlanItem {
@@ -92,4 +109,49 @@ export interface StudyPlan {
   items: PlanItem[]
   createdAt?: string
   updatedAt?: string
+}
+
+export interface AiRouteItem {
+  resourceId: number
+  startTime: string
+  endTime: string
+  transportation?: string
+  reason?: string
+}
+
+export interface AiRouteDay {
+  date: string
+  items: AiRouteItem[]
+}
+
+export interface AiRouteResult {
+  title: string
+  summary: string
+  estimatedBudget: number
+  days: AiRouteDay[]
+  tips: string[]
+  fallback: boolean
+  plan: StudyPlan
+}
+
+export type CheckinStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
+
+export interface Checkin {
+  id: number
+  userId: number
+  userNickname?: string
+  planId?: number
+  planTitle?: string
+  resourceId: number
+  resourceName: string
+  resourceAddress: string
+  checkinTime: string
+  imageUrl?: string
+  content?: string
+  status: CheckinStatus
+  auditComment?: string
+  auditedBy?: number
+  auditorNickname?: string
+  auditedAt?: string
+  createdAt: string
 }
